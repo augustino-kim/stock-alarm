@@ -2,20 +2,18 @@ name: Stock Alarm Bot
 
 on:
   schedule:
-    # UTC 기준 (한국시간 - 9시간)
-    # 09:02 ~ 15:42까지 20분마다 실행 (평일 월-금)
     - cron: '2,22,42 0-6 * * 1-5'
-  workflow_dispatch: # 수동 실행 버튼 활성화
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
