@@ -3,30 +3,27 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import sys
 
-# 따옴표 안에 본인의 정보가 정확히 들어갔는지 빈칸이나 줄바꿈은 없는지 꼭 확인하세요!
+# 따옴표 안에 본인의 정보로 다시 세팅해 주세요!
 TOKEN = '8680111639:AAEEJW7LFqYRCPub3MyJ9OrBR8gHT3MkaK4'
 CHAT_ID = '696237698'
 
 def send_telegram_msg(text):
-    print("텔레그램 전송을 시도합니다...")
     for i in range(0, len(text), 4000):
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         res = requests.get(url, params={'chat_id': CHAT_ID, 'text': text[i:i+4000]})
         
-        # 전송에 실패하면 이유를 뱉고 즉시 에러(빨간불)를 발생시킵니다!
         if res.status_code != 200:
             print(f"❌ 텔레그램 전송 실패! 상세 에러: {res.text}")
-            sys.exit(1) # 강제 종료
-        else:
-            print("✅ 텔레그램 전송 성공!")
+            sys.exit(1)
 
 def get_market_data():
     now_kst = datetime.utcnow() + timedelta(hours=9)
-    # 주말이므로 어제(금요일) 데이터 강제 조회
-    bizdate = '20260313' 
+    
+    # [핵심 변경] 강제 세팅했던 어제 날짜를 지우고, 코드가 실행되는 시점의 '오늘 날짜'를 자동으로 생성합니다.
+    bizdate = now_kst.strftime('%Y%m%d') 
     
     markets = {"코스피": "", "코스닥": "02", "선물": "03"}
-    full_msg = f"📊 [테스트: 2026-03-13 기준 매매동향]\n"
+    full_msg = f"📊 [{now_kst.strftime('%Y-%m-%d %H:%M')} 기준 당일 매매동향]\n"
     
     for name, sosok in markets.items():
         full_msg += f"\n▶ {name}\n시간 | 개인 | 외국인 | 기관계\n"
@@ -43,16 +40,24 @@ def get_market_data():
             for row in rows:
                 cols = row.find_all('td')
                 if len(cols) >= 4 and ":" in cols[0].text:
-                    full_msg += f"{cols[0].text.strip()} | {cols[1].text.strip()} | {cols[2].text.strip()} | {cols[3].text.strip()}\n"
+                    # 화면에 적힌 숫자 그대로를 어떠한 임의의 연산 없이 텍스트로 추출합니다.
+                    time_str = cols[0].text.strip()
+                    retail = cols[1].text.strip()
+                    foreigner = cols[2].text.strip()
+                    inst = cols[3].text.strip()
+                    
+                    full_msg += f"{time_str} | {retail} | {foreigner} | {inst}\n"
                     found_on_this_page = True
                     data_found = True
                     
+            # 너무 많은 과거 데이터를 보내지 않도록 최대 3페이지(최근 약 30분 치)까지만 수집하고 끊습니다.
             if not found_on_this_page or page >= 3: 
                 break
             page += 1
             
+        # 장 시작 직후(09:00~09:02) 아직 데이터가 안 올라왔을 경우를 대비한 안내 문구
         if not data_found:
-            full_msg += "데이터가 없습니다.\n"
+            full_msg += "현재 수집된 데이터가 없습니다.\n"
             
         full_msg += "--------------------\n"
         
