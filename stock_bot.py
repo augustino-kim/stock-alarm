@@ -35,7 +35,7 @@ def get_all_market_data():
     for name, sosok in markets_investor.items():
         full_msg += f"\n▶ {name}\n시간 | 개인 | 외국인 | 기관계\n"
         page = 1
-        while page <= 3: # 최대 3페이지까지만 수집
+        while page <= 3: # 매매동향은 기존대로 3페이지 수집
             url = f"https://finance.naver.com/sise/investorDealTrendTime.naver?bizdate={bizdate}&sosok={sosok}&page={page}"
             res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
             soup = BeautifulSoup(res.text, 'html.parser')
@@ -51,15 +51,16 @@ def get_all_market_data():
         full_msg += "--------------------\n"
 
     # ==========================================
-    # 2. 시간별 지수 흐름 및 거래량
+    # 2. 시간별 지수 흐름 (수정된 부분)
     # ==========================================
     full_msg += "\n[2] 지수 시간별 흐름\n"
     markets_index = {"KOSPI": "KOSPI", "KOSDAQ": "KOSDAQ"}
     
     for name, code in markets_index.items():
-        full_msg += f"\n▶ {name}\n시간 | 체결가 | 전일비 | 거래량(천주)\n"
+        # 출력 열을 체결시각과 체결가로 단순화
+        full_msg += f"\n▶ {name}\n체결시각 | 체결가\n"
         page = 1
-        while page <= 3: # 최대 3페이지까지만 수집
+        while page <= 4: # 수집 분량을 4페이지로 증가
             url = f"https://finance.naver.com/sise/sise_index_time.naver?code={code}&thistime={thistime}&page={page}"
             res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
             soup = BeautifulSoup(res.text, 'html.parser')
@@ -71,10 +72,9 @@ def get_all_market_data():
                 if len(cols) >= 4 and cols[0].text.strip() and ":" in cols[0].text:
                     time_str = cols[0].text.strip()
                     price = cols[1].text.strip()
-                    diff = cols[2].text.strip().replace('\n', '').replace('\t', '').replace(' ', '')
-                    volume = cols[3].text.strip()
                     
-                    full_msg += f"{time_str} | {price} | {diff} | {volume}\n"
+                    # 원하는 두 개의 데이터만 메시지에 추가
+                    full_msg += f"{time_str} | {price}\n"
                     found = True
             if not found: break
             page += 1
