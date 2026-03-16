@@ -2,10 +2,10 @@ name: Stock Alarm Bot
 
 on:
   schedule:
-    - cron: '2,22,42 0-6 * * 1-5'
+    # 띄어쓰기 주의: cron 앞에 스페이스 4칸입니다.
+    - cron: '9,29,49 0-6 * * 1-5'
   workflow_dispatch:
 
-# 이 부분을 추가하여 노란색 경고(Node.js 20)를 영구적으로 없앱니다.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
