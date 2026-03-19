@@ -53,10 +53,7 @@ def get_all_market_data():
             page += 1
         msg1 += "--------------------\n"
 
-    # 첫 번째 메시지 발송
     send_telegram_msg(msg1)
-    
-    # 메시지 꼬임 방지 1초 대기
     time.sleep(1)
 
     # ==========================================
@@ -66,7 +63,6 @@ def get_all_market_data():
     markets_index = {"KOSPI": "KOSPI", "KOSDAQ": "KOSDAQ"}
     
     for name, code in markets_index.items():
-        # 출력 열에 거래대금(십억) 추가
         msg2 += f"\n▶ {name}\n체결시각 | 체결가 | 거래대금(십억)\n"
         page = 1
         while page <= 4:
@@ -77,29 +73,24 @@ def get_all_market_data():
             found = False
             for row in rows:
                 cols = row.find_all('td')
-                # 거래대금(cols[4]) 데이터가 있는지 확인
                 if len(cols) >= 5 and cols[0].text.strip() and ":" in cols[0].text:
                     time_str = cols[0].text.strip()
                     price = cols[1].text.strip()
                     
-                    # 거래대금 텍스트에서 콤마 제거 후 숫자로 변환
-                    raw_trade_val = cols[4].text.strip().replace(',', '')
+                    # [-1] 인덱스를 사용하여 숨겨진 열과 무관하게 무조건 '마지막 열(거래대금)'을 가져옵니다.
+                    raw_trade_val = cols[-1].text.strip().replace(',', '')
                     try:
-                        # 1000으로 나누어 '십억' 단위로 만들고, 다시 콤마 포맷 적용
                         trade_val_billion = int(raw_trade_val) // 1000
                         trade_val_str = f"{trade_val_billion:,}"
                     except ValueError:
-                        # 변환 실패(데이터가 없거나 이상한 경우) 대비
                         trade_val_str = "-"
                     
-                    # 3개의 데이터를 조합해서 추가
                     msg2 += f"{time_str} | {price} | {trade_val_str}\n"
                     found = True
             if not found: break
             page += 1
         msg2 += "--------------------\n"
 
-    # 두 번째 메시지 발송
     send_telegram_msg(msg2)
 
 if __name__ == "__main__":
