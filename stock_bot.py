@@ -24,7 +24,7 @@ def get_all_market_data():
     thistime = now_kst.strftime('%Y%m%d%H%M%S')
     
     # ==========================================
-    # [첫 번째 메시지] 투자자별 매매동향 (금융투자 포함)
+    # [1] 투자자별 매매동향 (금융투자 포함)
     # ==========================================
     msg1 = f"🔔 [{now_kst.strftime('%Y-%m-%d %H:%M')}]\n[1] 투자자별 매매동향 (단위: 억)\n"
     markets_investor = {"코스피": "", "코스닥": "02", "선물": "03"}
@@ -57,7 +57,7 @@ def get_all_market_data():
     time.sleep(1)
 
     # ==========================================
-    # [두 번째 메시지] 시간별 지수 흐름 (거래대금 추가 및 십억 단위 변환)
+    # [2] 지수 시간별 흐름 (거짓 데이터 필터링)
     # ==========================================
     msg2 = f"🔔 [{now_kst.strftime('%Y-%m-%d %H:%M')}]\n[2] 지수 시간별 흐름\n"
     markets_index = {"KOSPI": "KOSPI", "KOSDAQ": "KOSDAQ"}
@@ -73,19 +73,26 @@ def get_all_market_data():
             found = False
             for row in rows:
                 cols = row.find_all('td')
-                if len(cols) >= 5 and cols[0].text.strip() and ":" in cols[0].text:
+                
+                # 거래대금 데이터가 있는 6번째 열(cols[5])까지 안전하게 확인
+                if len(cols) >= 6 and cols[0].text.strip() and ":" in cols[0].text:
                     time_str = cols[0].text.strip()
                     price = cols[1].text.strip()
+                    amount_raw = cols[5].text.strip()
                     
-                    # [-1] 인덱스를 사용하여 숨겨진 열과 무관하게 무조건 '마지막 열(거래대금)'을 가져옵니다.
-                    raw_trade_val = cols[-1].text.strip().replace(',', '')
+                    # 💡 핵심: 거래대금이 '-' 이거나 비어있으면 건너뛰기 (continue)
+                    if amount_raw == "-" or not amount_raw:
+                        continue
+                        
+                    # 거래대금(백만 단위)을 가져와 십억 단위로 계산 후 쉼표 처리
                     try:
-                        trade_val_billion = int(raw_trade_val) // 1000
-                        trade_val_str = f"{trade_val_billion:,}"
+                        amount_num = int(amount_raw.replace(',', ''))
+                        amount_billion = amount_num // 1000
+                        amount_str = f"{amount_billion:,}"
                     except ValueError:
-                        trade_val_str = "-"
+                        amount_str = amount_raw # 혹시 모를 오류 시 원본 출력
                     
-                    msg2 += f"{time_str} | {price} | {trade_val_str}\n"
+                    msg2 += f"{time_str} | {price} | {amount_str}\n"
                     found = True
             if not found: break
             page += 1
