@@ -24,13 +24,12 @@ def get_all_market_data():
     thistime = now_kst.strftime('%Y%m%d%H%M%S')
     
     # ==========================================
-    # [첫 번째 메시지] 투자자별 매매동향 (금융투자 추가)
+    # [첫 번째 메시지] 투자자별 매매동향 (금융투자 포함)
     # ==========================================
     msg1 = f"🔔 [{now_kst.strftime('%Y-%m-%d %H:%M')}]\n[1] 투자자별 매매동향 (단위: 억)\n"
     markets_investor = {"코스피": "", "코스닥": "02", "선물": "03"}
     
     for name, sosok in markets_investor.items():
-        # 열 헤더에 '금투' 추가
         msg1 += f"\n▶ {name}\n시간 | 개인 | 외국인 | 기관 | 금투\n"
         page = 1
         while page <= 2: 
@@ -41,13 +40,12 @@ def get_all_market_data():
             found = False
             for row in rows:
                 cols = row.find_all('td')
-                # 데이터가 존재하고, 금융투자(cols[4])까지 있는 행만 추출
                 if len(cols) >= 5 and ":" in cols[0].text:
                     time_str = cols[0].text.strip()
                     retail = cols[1].text.strip()
                     foreigner = cols[2].text.strip()
                     inst = cols[3].text.strip()
-                    financial = cols[4].text.strip() # 금융투자 추가
+                    financial = cols[4].text.strip()
                     
                     msg1 += f"{time_str} | {retail} | {foreigner} | {inst} | {financial}\n"
                     found = True
@@ -58,17 +56,18 @@ def get_all_market_data():
     # 첫 번째 메시지 발송
     send_telegram_msg(msg1)
     
-    # 텔레그램 서버에서 메시지 순서가 뒤바뀌는 것을 방지하기 위해 1초 대기
+    # 메시지 꼬임 방지 1초 대기
     time.sleep(1)
 
     # ==========================================
-    # [두 번째 메시지] 시간별 지수 흐름 (기존 유지)
+    # [두 번째 메시지] 시간별 지수 흐름 (거래대금 추가 및 십억 단위 변환)
     # ==========================================
     msg2 = f"🔔 [{now_kst.strftime('%Y-%m-%d %H:%M')}]\n[2] 지수 시간별 흐름\n"
     markets_index = {"KOSPI": "KOSPI", "KOSDAQ": "KOSDAQ"}
     
     for name, code in markets_index.items():
-        msg2 += f"\n▶ {name}\n체결시각 | 체결가\n"
+        # 출력 열에 거래대금(십억) 추가
+        msg2 += f"\n▶ {name}\n체결시각 | 체결가 | 거래대금(십억)\n"
         page = 1
         while page <= 4:
             url = f"https://finance.naver.com/sise/sise_index_time.naver?code={code}&thistime={thistime}&page={page}"
@@ -78,11 +77,23 @@ def get_all_market_data():
             found = False
             for row in rows:
                 cols = row.find_all('td')
-                if len(cols) >= 4 and cols[0].text.strip() and ":" in cols[0].text:
+                # 거래대금(cols[4]) 데이터가 있는지 확인
+                if len(cols) >= 5 and cols[0].text.strip() and ":" in cols[0].text:
                     time_str = cols[0].text.strip()
                     price = cols[1].text.strip()
                     
-                    msg2 += f"{time_str} | {price}\n"
+                    # 거래대금 텍스트에서 콤마 제거 후 숫자로 변환
+                    raw_trade_val = cols[4].text.strip().replace(',', '')
+                    try:
+                        # 1000으로 나누어 '십억' 단위로 만들고, 다시 콤마 포맷 적용
+                        trade_val_billion = int(raw_trade_val) // 1000
+                        trade_val_str = f"{trade_val_billion:,}"
+                    except ValueError:
+                        # 변환 실패(데이터가 없거나 이상한 경우) 대비
+                        trade_val_str = "-"
+                    
+                    # 3개의 데이터를 조합해서 추가
+                    msg2 += f"{time_str} | {price} | {trade_val_str}\n"
                     found = True
             if not found: break
             page += 1
