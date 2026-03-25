@@ -98,6 +98,35 @@ def get_all_market_data():
             page += 1
         msg2 += "--------------------\n"
 
+    # ==========================================
+    # [추가] 브렌트유(Brent Oil) 실시간 가격
+    # ==========================================
+    msg2 += "\n▶ Brent Oil (브렌트유)\n"
+    try:
+        url_oil = "https://www.investing.com/commodities/brent-oil"
+        headers_oil = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5'
+        }
+        res_oil = requests.get(url_oil, headers=headers_oil, timeout=10)
+        
+        if res_oil.status_code == 200:
+            soup_oil = BeautifulSoup(res_oil.text, 'html.parser')
+            price_div = soup_oil.find('div', {'data-test': 'instrument-price-last'})
+            
+            if price_div:
+                oil_price = price_div.text.strip()
+                msg2 += f"현재가 | $ {oil_price}\n"
+            else:
+                msg2 += "현재가 | 데이터 파싱 실패\n"
+        else:
+            msg2 += f"현재가 | 접근 차단 (상태코드: {res_oil.status_code})\n"
+    except Exception as e:
+        msg2 += f"현재가 | 통신 오류 발생\n"
+        
+    msg2 += "--------------------\n"
+    
     send_telegram_msg(msg2)
 
 if __name__ == "__main__":
