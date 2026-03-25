@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import sys
 import time
 
-# ⚠️ 여기에 발급받으신 토큰과 챗ID를 다시 꼭 넣어주세요!
+# ⚠️ 발급받으신 토큰과 챗ID
 TOKEN = '8680111639:AAEEJW7LFqYRCPub3MyJ9OrBR8gHT3MkaK4'
 CHAT_ID = '696237698'
 
@@ -99,35 +99,35 @@ def get_all_market_data():
         msg2 += "--------------------\n"
 
     # ==========================================
-    # [추가] 브렌트유(Brent Oil) 실시간 가격
+    # [추가] 글로벌 에너지 가격 (인베스팅닷컴)
     # ==========================================
-    msg2 += "\n▶ Brent Oil (브렌트유)\n"
-    try:
-        url_oil = "https://www.investing.com/commodities/brent-oil"
-        headers_oil = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
-        }
-        res_oil = requests.get(url_oil, headers=headers_oil, timeout=10)
-        
-        if res_oil.status_code == 200:
-            soup_oil = BeautifulSoup(res_oil.text, 'html.parser')
-            price_div = soup_oil.find('div', {'data-test': 'instrument-price-last'})
-            
-            if price_div:
-                oil_price = price_div.text.strip()
-                msg2 += f"현재가 | $ {oil_price}\n"
-            else:
-                msg2 += "현재가 | 데이터 파싱 실패\n"
-        else:
-            msg2 += f"현재가 | 접근 차단 (상태코드: {res_oil.status_code})\n"
-    except Exception as e:
-        msg2 += f"현재가 | 통신 오류 발생\n"
-        
-    msg2 += "--------------------\n"
+    msg2 += "\n▶ 글로벌 에너지 가격\n"
     
-    send_telegram_msg(msg2)
+    # 💡 세 개의 사이트와 이름을 리스트로 묶어서 차례대로 실행합니다.
+    investing_targets = [
+        ("Brent Oil Futures (브렌트유 선물)", "https://www.investing.com/commodities/brent-oil"),
+        ("Crude Oil Futures (크루드 오일 선물)", "https://www.investing.com/commodities/crude-oil"),
+        ("WTI/USD present (서부텍사스유 현물)", "https://www.investing.com/currencies/wti-usd")
+    ]
+    
+    headers_inv = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5'
+    }
 
-if __name__ == "__main__":
-    get_all_market_data()
+    for name, url_inv in investing_targets:
+        try:
+            res_inv = requests.get(url_inv, headers=headers_inv, timeout=10)
+            if res_inv.status_code == 200:
+                soup_inv = BeautifulSoup(res_inv.text, 'html.parser')
+                # 3개 사이트 모두 공통적으로 사용하는 data-test 속성을 찾아 값을 추출합니다.
+                price_div = soup_inv.find('div', {'data-test': 'instrument-price-last'})
+                
+                if price_div:
+                    price_val = price_div.text.strip()
+                    msg2 += f"{name} | $ {price_val}\n"
+                else:
+                    msg2 += f"{name} | 데이터 파싱 실패\n"
+            else:
+                msg2 += f"{name} | 접근 차단 ({res_inv.
