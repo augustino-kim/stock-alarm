@@ -121,7 +121,6 @@ def get_all_market_data():
             res_inv = requests.get(url_inv, headers=headers_inv, timeout=10)
             if res_inv.status_code == 200:
                 soup_inv = BeautifulSoup(res_inv.text, 'html.parser')
-                # 3개 사이트 모두 공통적으로 사용하는 data-test 속성을 찾아 값을 추출합니다.
                 price_div = soup_inv.find('div', {'data-test': 'instrument-price-last'})
                 
                 if price_div:
@@ -130,4 +129,13 @@ def get_all_market_data():
                 else:
                     msg2 += f"{name} | 데이터 파싱 실패\n"
             else:
-                msg2 += f"{name} | 접근 차단 ({res_inv.
+                msg2 += f"{name} | 접근 차단 ({res_inv.status_code})\n"
+        except Exception as e:
+            msg2 += f"{name} | 통신 오류\n"
+            
+    msg2 += "--------------------\n"
+    
+    send_telegram_msg(msg2)
+
+if __name__ == "__main__":
+    get_all_market_data()
