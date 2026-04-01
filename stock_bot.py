@@ -80,17 +80,15 @@ def get_all_market_data():
                     price = cols[1].text.strip()
                     amount_raw = cols[5].text.strip()
                     
-                    # 💡 핵심: 거래대금이 '-' 이거나 비어있으면 건너뛰기 (continue)
                     if amount_raw == "-" or not amount_raw:
                         continue
                         
-                    # 거래대금(백만 단위)을 가져와 십억 단위로 계산 후 쉼표 처리
                     try:
                         amount_num = int(amount_raw.replace(',', ''))
                         amount_billion = amount_num // 1000
                         amount_str = f"{amount_billion:,}"
                     except ValueError:
-                        amount_str = amount_raw # 혹시 모를 오류 시 원본 출력
+                        amount_str = amount_raw 
                     
                     msg2 += f"{time_str} | {price} | {amount_str}\n"
                     found = True
@@ -99,42 +97,33 @@ def get_all_market_data():
         msg2 += "--------------------\n"
 
     # ==========================================
-    # [추가] 글로벌 에너지 가격 (인베스팅닷컴)
+    # [추가] 국제 유가 선물 (네이버 금융)
     # ==========================================
-    msg2 += "\n▶ 글로벌 에너지 가격\n"
-    
-    # 💡 세 개의 사이트와 이름을 리스트로 묶어서 차례대로 실행합니다.
-    investing_targets = [
-        ("Brent Oil Futures (브렌트유 선물)", "https://www.investing.com/commodities/brent-oil"),
-        ("Crude Oil Futures (크루드 오일 선물)", "https://www.investing.com/commodities/crude-oil"),
-        ("WTI/USD present (서부텍사스유 현물)", "https://www.investing.com/currencies/wti-usd")
+    msg2 += "\n▶ 국제 유가 선물 (네이버)\n"
+    oil_targets = [
+        ("WTI 선물", "OIL_CL"),
+        ("브렌트유 선물", "OIL_BRT")
     ]
     
-    headers_inv = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5'
-    }
-
-    for name, url_inv in investing_targets:
+    for name, code in oil_targets:
         try:
-            res_inv = requests.get(url_inv, headers=headers_inv, timeout=10)
-            if res_inv.status_code == 200:
-                soup_inv = BeautifulSoup(res_inv.text, 'html.parser')
-                price_div = soup_inv.find('div', {'data-test': 'instrument-price-last'})
-                
-                if price_div:
-                    price_val = price_div.text.strip()
-                    msg2 += f"{name} | $ {price_val}\n"
-                else:
-                    msg2 += f"{name} | 데이터 파싱 실패\n"
+            url_oil = f"https://finance.naver.com/marketindex/worldOilDetail.naver?marketindexCd={code}"
+            res_oil = requests.get(url_oil, headers={'User-Agent': 'Mozilla/5.0'})
+            soup_oil = BeautifulSoup(res_oil.text, 'html.parser')
+            
+            # 네이버 유가 상세 페이지의 정확한 가격 태그 위치
+            price_tag = soup_oil.select_one('.no_today .blind')
+            
+            if price_tag:
+                price_val = price_tag.text.strip()
+                msg2 += f"{name} | $ {price_val}\n"
             else:
-                msg2 += f"{name} | 접근 차단 ({res_inv.status_code})\n"
+                msg2 += f"{name} | 가격 추출 실패\n"
         except Exception as e:
-            msg2 += f"{name} | 통신 오류\n"
+            msg2 += f"{name} | 데이터 오류\n"
             
     msg2 += "--------------------\n"
-    
+
     send_telegram_msg(msg2)
 
 if __name__ == "__main__":
